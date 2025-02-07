@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:14
+    container_name: postgres_container
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend_net
+    ports:
+      - 5432:5432
+
+  redis:
+    build:
+      context: ./redis
+      dockerfile: Dockerfile
+    container_name: redis_container
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - backend_net
+    env_file:
+      - .env
+
+  django:
+    build:
+      context: .
+      dockerfile: ./django_app/Dockerfile
+    container_name: django_container
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./django_app:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - backend_net
+    env_file:
+      - .env
+
+  # celery:
+  #   build:
+  #     context: .
+  #     dockerfile: ./celery/Dockerfile
+  #   container_name: celery_container
+  #   command: celery -A tasks worker --loglevel=info
+  #   volumes:
+  #     - ./celery:/app
+  #   depends_on:
+  #     - redis
+  #     - django
+  #   networks:
+  #     - backend_net
+  #   env_file:
+  #     - .env
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  backend_net:
+    driver: bridge
